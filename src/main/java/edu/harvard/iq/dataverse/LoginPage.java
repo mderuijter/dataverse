@@ -26,6 +26,7 @@ import javax.ejb.EJB;
 import javax.faces.application.FacesMessage;
 import javax.faces.component.UIComponent;
 import javax.faces.context.FacesContext;
+import javax.faces.context.Flash;
 import javax.faces.event.AjaxBehaviorEvent;
 import javax.faces.validator.ValidatorException;
 import javax.faces.view.ViewScoped;
@@ -163,8 +164,13 @@ public class LoginPage implements java.io.Serializable {
             logger.info("Credential list is null!");
             return null;
         }
+        String password = null;
         for ( FilledCredential fc : filledCredentialsList ) {       
             authReq.putCredential(fc.getCredential().getKey(), fc.getValue());
+            if (fc.getCredential().getKey().contains("password")) password = fc.getValue();
+        }
+        if (password != null){
+            FacesContext.getCurrentInstance().getExternalContext().getFlash().put("password",password);
         }
         authReq.setIpAddress( dvRequestService.getDataverseRequest().getSourceAddress() );
         try {

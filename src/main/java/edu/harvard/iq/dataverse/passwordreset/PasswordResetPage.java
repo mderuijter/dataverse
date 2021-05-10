@@ -100,6 +100,9 @@ public class PasswordResetPage implements java.io.Serializable {
             passwordResetData = passwordResetExecResponse.getPasswordResetData();
             if (passwordResetData != null) {
                 user = passwordResetData.getBuiltinUser();
+                if (passwordResetData.getReason().equals(PasswordResetData.Reason.UPGRADE_REQUIRED)){
+                    newPassword = (String) FacesContext.getCurrentInstance().getExternalContext().getFlash().get("password");
+                }
             } else {
                 FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, 
                         BundleUtil.getStringFromBundle("passwdVal.passwdReset.resetLinkTitle"),
@@ -145,6 +148,7 @@ public class PasswordResetPage implements java.io.Serializable {
         PasswordChangeAttemptResponse response = passwordResetService.attemptPasswordReset(user, newPassword, this.token);
         if (response.isChanged()) {
             FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, response.getMessageSummary(), response.getMessageDetail()));
+            FacesContext.getCurrentInstance().getExternalContext().getFlash().remove("password");
             String builtinAuthProviderId = BuiltinAuthenticationProvider.PROVIDER_ID;
             AuthenticatedUser au = authSvc.lookupUser(builtinAuthProviderId, user.getUserName());
             session.setUser(au);
@@ -154,6 +158,21 @@ public class PasswordResetPage implements java.io.Serializable {
             return null;
         }
     }
+
+    /*public String resetPassword(String oldPassword) {
+        FacesContext fc = FacesContext.getCurrentInstance();
+        PasswordChangeAttemptResponse response = passwordResetService.attemptPasswordReset(user, oldPassword, this.token);
+        if (response.isChanged()) {
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, response.getMessageSummary(), response.getMessageDetail()));
+            String builtinAuthProviderId = BuiltinAuthenticationProvider.PROVIDER_ID;
+            AuthenticatedUser au = authSvc.lookupUser(builtinAuthProviderId, user.getUserName());
+            session.setUser(au);
+            return "/dataverse.xhtml?alias=" + dataverseService.findRootDataverse().getAlias() + "faces-redirect=true";
+        } else {
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, response.getMessageSummary(), response.getMessageDetail()));
+            return null;
+        }
+    }*/
 
     //Note: Ported from DataverseUserPage
     public void validateNewPassword(FacesContext context, UIComponent toValidate, Object value) {
