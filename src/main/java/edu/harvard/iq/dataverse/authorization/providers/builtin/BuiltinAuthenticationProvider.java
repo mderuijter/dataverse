@@ -4,9 +4,12 @@ import edu.harvard.iq.dataverse.authorization.*;
 import edu.harvard.iq.dataverse.authorization.users.AuthenticatedUser;
 import edu.harvard.iq.dataverse.passwordreset.PasswordChangeAttemptResponse;
 import edu.harvard.iq.dataverse.passwordreset.PasswordResetException;
+import edu.harvard.iq.dataverse.passwordreset.PasswordResetServiceBean;
+import edu.harvard.iq.dataverse.settings.SettingsServiceBean;
 import edu.harvard.iq.dataverse.util.BundleUtil;
 import edu.harvard.iq.dataverse.validation.PasswordValidatorServiceBean;
 
+import javax.ejb.EJB;
 import java.util.Arrays;
 import java.util.List;
 
@@ -32,13 +35,15 @@ public class BuiltinAuthenticationProvider implements CredentialsAuthenticationP
     final BuiltinUserServiceBean bean;
     final AuthenticationServiceBean authBean;
     private PasswordValidatorServiceBean passwordValidatorService;
+    private PasswordResetServiceBean passwordResetService;
+    private SettingsServiceBean settingsService;
 
-
-
-    public BuiltinAuthenticationProvider( BuiltinUserServiceBean aBean, PasswordValidatorServiceBean passwordValidatorService, AuthenticationServiceBean auBean  ) {
+    public BuiltinAuthenticationProvider( BuiltinUserServiceBean aBean, PasswordValidatorServiceBean passwordValidatorService, AuthenticationServiceBean auBean ,PasswordResetServiceBean passwordResetService, SettingsServiceBean settingsService ) {
         this.bean = aBean;
         this.authBean = auBean;
         this.passwordValidatorService = passwordValidatorService;
+        this.passwordResetService = passwordResetService;
+        this.settingsService = settingsService;
         CREDENTIALS_LIST = Arrays.asList(new Credential(KEY_USERNAME_OR_EMAIL), new Credential(KEY_PASSWORD, true));
     }
 
@@ -124,12 +129,11 @@ public class BuiltinAuthenticationProvider implements CredentialsAuthenticationP
              */
         if ( u.getPasswordEncryptionVersion() < PasswordEncryption.getLatestVersionNumber() ) {
             // causes null pointer exception here, it seems when the setting :SilentPasswordAlgorithmUpdateEnabled is called via entity manager(em) em is null.
-            boolean silentPasswordAlgorithmUpdate = bean.passwordResetService.isSilentPasswordAlgorithmUpdateEnabled();
-                    //systemConfig.isSilentPasswordAlgorithmUpdateEnabled();
-                    //settingsService.isTrueForKey(SettingsServiceBean.Key.SilentPasswordAlgorithmUpdateEnabled, false);
+            boolean silentPasswordAlgorithmUpdate = true;
+            System.out.println("silentPassword: "+silentPasswordAlgorithmUpdate);
 
             if (silentPasswordAlgorithmUpdate){
-                PasswordChangeAttemptResponse response = bean.passwordResetService.attemptPasswordReset(u, authReq.getCredential(KEY_PASSWORD), authBean.findApiTokenByUser(authUser).getTokenString());
+                PasswordChangeAttemptResponse response = passwordResetService.attemptPasswordReset(u, authReq.getCredential(KEY_PASSWORD), authBean.findApiTokenByUser(authUser).getTokenString());
             } else {
                 try {
                     String passwordResetUrl = bean.requestPasswordUpgradeLink(u);

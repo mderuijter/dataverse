@@ -5,6 +5,8 @@ import edu.harvard.iq.dataverse.authorization.AuthenticationServiceBean;
 import edu.harvard.iq.dataverse.authorization.exceptions.AuthorizationSetupException;
 import edu.harvard.iq.dataverse.authorization.providers.AuthenticationProviderFactory;
 import edu.harvard.iq.dataverse.authorization.providers.AuthenticationProviderRow;
+import edu.harvard.iq.dataverse.passwordreset.PasswordResetServiceBean;
+import edu.harvard.iq.dataverse.settings.SettingsServiceBean;
 import edu.harvard.iq.dataverse.validation.PasswordValidatorServiceBean;
 
 /**
@@ -17,8 +19,8 @@ public class BuiltinAuthenticationProviderFactory implements AuthenticationProvi
     
     private final BuiltinAuthenticationProvider provider;
 
-    public BuiltinAuthenticationProviderFactory(BuiltinUserServiceBean busBean, PasswordValidatorServiceBean passwordValidatorService, AuthenticationServiceBean authBean ) {
-        provider = new BuiltinAuthenticationProvider(busBean, passwordValidatorService, authBean);
+    public BuiltinAuthenticationProviderFactory(BuiltinUserServiceBean busBean, PasswordValidatorServiceBean passwordValidatorService, AuthenticationServiceBean authBean, PasswordResetServiceBean passwordResetService, SettingsServiceBean settingsService ) {
+        provider = new BuiltinAuthenticationProvider(busBean, passwordValidatorService, authBean, passwordResetService, settingsService);
     }
     
     @Override

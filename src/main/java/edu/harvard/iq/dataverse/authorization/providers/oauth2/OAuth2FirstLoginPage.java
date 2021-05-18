@@ -16,6 +16,8 @@ import edu.harvard.iq.dataverse.authorization.exceptions.AuthenticationFailedExc
 import edu.harvard.iq.dataverse.authorization.providers.builtin.BuiltinAuthenticationProvider;
 import edu.harvard.iq.dataverse.authorization.providers.builtin.BuiltinUserServiceBean;
 import edu.harvard.iq.dataverse.authorization.users.AuthenticatedUser;
+import edu.harvard.iq.dataverse.passwordreset.PasswordResetServiceBean;
+import edu.harvard.iq.dataverse.settings.SettingsServiceBean;
 import edu.harvard.iq.dataverse.util.BundleUtil;
 import edu.harvard.iq.dataverse.util.JsfHelper;
 import edu.harvard.iq.dataverse.util.SystemConfig;
@@ -62,6 +64,12 @@ public class OAuth2FirstLoginPage implements java.io.Serializable {
 
     @EJB
     SystemConfig systemConfig;
+
+    @EJB
+    SettingsServiceBean settingsService;
+
+    @EJB
+    PasswordResetServiceBean passwordResetService;
 
     @EJB
     AuthTestDataServiceBean authTestDataSvc;
@@ -201,7 +209,7 @@ public class OAuth2FirstLoginPage implements java.io.Serializable {
     }
 
     public String convertExistingAccount() {
-        BuiltinAuthenticationProvider biap = new BuiltinAuthenticationProvider(builtinUserSvc, passwordValidatorService, authenticationSvc);
+        BuiltinAuthenticationProvider biap = new BuiltinAuthenticationProvider(builtinUserSvc, passwordValidatorService, authenticationSvc, passwordResetService, settingsService);
         AuthenticationRequest auReq = new AuthenticationRequest();
         final List<CredentialsAuthenticationProvider.Credential> creds = biap.getRequiredCredentials();
         auReq.putCredential(creds.get(0).getKey(), getUsername());

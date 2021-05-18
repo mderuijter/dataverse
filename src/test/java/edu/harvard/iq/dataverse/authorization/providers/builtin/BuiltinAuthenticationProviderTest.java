@@ -3,13 +3,16 @@ package edu.harvard.iq.dataverse.authorization.providers.builtin;
 import edu.harvard.iq.dataverse.authorization.AuthenticationRequest;
 import edu.harvard.iq.dataverse.authorization.AuthenticationResponse;
 import edu.harvard.iq.dataverse.authorization.AuthenticationServiceBean;
-import edu.harvard.iq.dataverse.mocks.MockAuthenticationServiceBean;
-import edu.harvard.iq.dataverse.mocks.MockBuiltinUserServiceBean;
-import edu.harvard.iq.dataverse.mocks.MockPasswordValidatorServiceBean;
+import edu.harvard.iq.dataverse.mocks.*;
+import edu.harvard.iq.dataverse.passwordreset.PasswordResetServiceBean;
+import edu.harvard.iq.dataverse.settings.SettingsServiceBean;
 import edu.harvard.iq.dataverse.validation.PasswordValidatorServiceBean;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Before;
+import org.mockito.Mock;
+
+import javax.ejb.EJB;
 
 /**
  *
@@ -21,13 +24,17 @@ public class BuiltinAuthenticationProviderTest {
     PasswordValidatorServiceBean passwordValidatorService;
     MockBuiltinUserServiceBean bean = null;
     AuthenticationServiceBean authBean = null;
+    SettingsServiceBean settingsService = null;
+    PasswordResetServiceBean passwordResetService = null;
     
     @Before
     public void setup() {
         bean = new MockBuiltinUserServiceBean();
         passwordValidatorService = new MockPasswordValidatorServiceBean();
         authBean = new MockAuthenticationServiceBean();
-        sut = new BuiltinAuthenticationProvider(bean, passwordValidatorService, authBean);
+        settingsService =  new MockSettingsServiceBean();
+        passwordResetService = new MockPasswordResetServiceBean();
+        sut = new BuiltinAuthenticationProvider(bean, passwordValidatorService, authBean, passwordResetService, settingsService);
     }
 
     /**

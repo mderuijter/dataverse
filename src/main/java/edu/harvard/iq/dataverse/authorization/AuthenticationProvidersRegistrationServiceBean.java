@@ -17,6 +17,8 @@ import edu.harvard.iq.dataverse.authorization.providers.oauth2.AbstractOAuth2Aut
 import edu.harvard.iq.dataverse.authorization.providers.oauth2.OAuth2AuthenticationProviderFactory;
 import edu.harvard.iq.dataverse.authorization.providers.oauth2.oidc.OIDCAuthenticationProviderFactory;
 import edu.harvard.iq.dataverse.authorization.providers.shib.ShibAuthenticationProviderFactory;
+import edu.harvard.iq.dataverse.passwordreset.PasswordResetServiceBean;
+import edu.harvard.iq.dataverse.settings.SettingsServiceBean;
 import edu.harvard.iq.dataverse.validation.PasswordValidatorServiceBean;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,6 +62,12 @@ public class AuthenticationProvidersRegistrationServiceBean {
     
     @EJB
     AuthenticationServiceBean authenticationService;
+
+    @EJB
+    SettingsServiceBean settingsService;
+
+    @EJB
+    PasswordResetServiceBean passwordResetService;
     
     /**
      * The maps below (the objects themselves) are "final", but the
@@ -99,7 +107,7 @@ public class AuthenticationProvidersRegistrationServiceBean {
             // using @AutoService - similiarly how we are using with the 
             // metadata Exporter classes. (may not necessarily be possible, or 
             // easy; hence "consider" -- L.A.)
-            registerProviderFactory( new BuiltinAuthenticationProviderFactory(builtinUserServiceBean, passwordValidatorService, authenticationService) );
+            registerProviderFactory( new BuiltinAuthenticationProviderFactory(builtinUserServiceBean, passwordValidatorService, authenticationService, passwordResetService, settingsService) );
             registerProviderFactory( new ShibAuthenticationProviderFactory() );
             registerProviderFactory( new OAuth2AuthenticationProviderFactory() );
             registerProviderFactory( new OIDCAuthenticationProviderFactory() );
