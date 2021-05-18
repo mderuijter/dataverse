@@ -100,9 +100,9 @@ public class PasswordResetPage implements java.io.Serializable {
             passwordResetData = passwordResetExecResponse.getPasswordResetData();
             if (passwordResetData != null) {
                 user = passwordResetData.getBuiltinUser();
-                if (passwordResetData.getReason().equals(PasswordResetData.Reason.UPGRADE_REQUIRED)){
+                /*if (passwordResetData.getReason().equals(PasswordResetData.Reason.UPGRADE_REQUIRED)){
                     newPassword = (String) FacesContext.getCurrentInstance().getExternalContext().getFlash().get("password");
-                }
+                }*/
             } else {
                 FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, 
                         BundleUtil.getStringFromBundle("passwdVal.passwdReset.resetLinkTitle"),
@@ -148,7 +148,7 @@ public class PasswordResetPage implements java.io.Serializable {
         PasswordChangeAttemptResponse response = passwordResetService.attemptPasswordReset(user, newPassword, this.token);
         if (response.isChanged()) {
             FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, response.getMessageSummary(), response.getMessageDetail()));
-            FacesContext.getCurrentInstance().getExternalContext().getFlash().remove("password");
+            //FacesContext.getCurrentInstance().getExternalContext().getFlash().remove("password");
             String builtinAuthProviderId = BuiltinAuthenticationProvider.PROVIDER_ID;
             AuthenticatedUser au = authSvc.lookupUser(builtinAuthProviderId, user.getUserName());
             session.setUser(au);

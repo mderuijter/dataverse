@@ -690,6 +690,11 @@ public class SystemConfig {
         return settingsService.isTrueForKey(SettingsServiceBean.Key.ShibAttributeCharacterSetConversionEnabled, defaultResponse);
     }
 
+    public boolean isSilentPasswordAlgorithmUpdateEnabled(){
+        boolean defaultSetting = false;
+        return settingsService.isTrueForKey(SettingsServiceBean.Key.SilentPasswordAlgorithmUpdateEnabled, defaultSetting);
+    }
+
     /**
      * getPVDictionaries
      *

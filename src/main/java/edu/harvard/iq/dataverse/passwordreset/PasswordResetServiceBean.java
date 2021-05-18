@@ -2,6 +2,7 @@ package edu.harvard.iq.dataverse.passwordreset;
 
 import edu.harvard.iq.dataverse.MailServiceBean;
 import edu.harvard.iq.dataverse.authorization.AuthenticationServiceBean;
+import edu.harvard.iq.dataverse.settings.SettingsServiceBean;
 import edu.harvard.iq.dataverse.util.BundleUtil;
 import edu.harvard.iq.dataverse.validation.PasswordValidatorServiceBean;
 import edu.harvard.iq.dataverse.authorization.providers.builtin.PasswordEncryption;
@@ -264,6 +265,10 @@ public class PasswordResetServiceBean {
             return new PasswordChangeAttemptResponse(false, messageSummary, messageDetail);
         }
 
+    }
+
+    public boolean isSilentPasswordAlgorithmUpdateEnabled(){
+        return systemConfig.isSilentPasswordAlgorithmUpdateEnabled();
     }
 
     private boolean deleteToken(String token) {

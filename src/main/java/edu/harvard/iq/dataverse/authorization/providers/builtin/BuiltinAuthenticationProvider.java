@@ -1,27 +1,23 @@
 package edu.harvard.iq.dataverse.authorization.providers.builtin;
 
-import edu.harvard.iq.dataverse.authorization.AuthenticatedUserDisplayInfo;
-import edu.harvard.iq.dataverse.authorization.AuthenticationProviderDisplayInfo;
-import edu.harvard.iq.dataverse.authorization.AuthenticationRequest;
-import edu.harvard.iq.dataverse.authorization.AuthenticationResponse;
-import edu.harvard.iq.dataverse.authorization.AuthenticationServiceBean;
-import edu.harvard.iq.dataverse.authorization.CredentialsAuthenticationProvider;
-import java.util.Arrays;
-import java.util.List;
-import static edu.harvard.iq.dataverse.authorization.CredentialsAuthenticationProvider.Credential;
+import edu.harvard.iq.dataverse.authorization.*;
 import edu.harvard.iq.dataverse.authorization.users.AuthenticatedUser;
+import edu.harvard.iq.dataverse.passwordreset.PasswordChangeAttemptResponse;
 import edu.harvard.iq.dataverse.passwordreset.PasswordResetException;
 import edu.harvard.iq.dataverse.util.BundleUtil;
 import edu.harvard.iq.dataverse.validation.PasswordValidatorServiceBean;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
- * An authentication provider built into the application. Uses JPA and the 
+ * An authentication provider built into the application. Uses JPA and the
  * local database to store the users.
- * 
+ *
  * @author michael
  */
 public class BuiltinAuthenticationProvider implements CredentialsAuthenticationProvider {
-    
+
     public static final String PROVIDER_ID = "builtin";
     /**
      * TODO: Think more about if it really makes sense to have the key for a
@@ -32,10 +28,12 @@ public class BuiltinAuthenticationProvider implements CredentialsAuthenticationP
     public static final String KEY_USERNAME_OR_EMAIL = "login.builtin.credential.usernameOrEmail";
     public static final String KEY_PASSWORD = "login.builtin.credential.password";
     private static List<Credential> CREDENTIALS_LIST;
-      
+
     final BuiltinUserServiceBean bean;
     final AuthenticationServiceBean authBean;
     private PasswordValidatorServiceBean passwordValidatorService;
+
+
 
     public BuiltinAuthenticationProvider( BuiltinUserServiceBean aBean, PasswordValidatorServiceBean passwordValidatorService, AuthenticationServiceBean auBean  ) {
         this.bean = aBean;
@@ -68,12 +66,12 @@ public class BuiltinAuthenticationProvider implements CredentialsAuthenticationP
     public boolean isUserDeletionAllowed() {
         return true;
     }
-    
+
     @Override
     public void deleteUser(String userIdInProvider) {
         bean.removeUser(userIdInProvider);
     }
-    
+
     @Override
     public void updatePassword(String userIdInProvider, String newPassword) {
         BuiltinUser biUser = bean.findByUserName( userIdInProvider  );
@@ -81,7 +79,7 @@ public class BuiltinAuthenticationProvider implements CredentialsAuthenticationP
                                        PasswordEncryption.getLatestVersionNumber());
         bean.save(biUser);
     }
-    
+
     /**
      * Validates that the passed password is indeed the password of the user.
      * @param userIdInProvider
@@ -95,13 +93,13 @@ public class BuiltinAuthenticationProvider implements CredentialsAuthenticationP
         return PasswordEncryption.getVersion(biUser.getPasswordEncryptionVersion())
                                  .check(password, biUser.getEncryptedPassword());
     }
-    
+
 
     @Override
     public AuthenticationResponse authenticate( AuthenticationRequest authReq ) {
         BuiltinUser u = bean.findByUserName(authReq.getCredential(KEY_USERNAME_OR_EMAIL) );
         AuthenticatedUser authUser = null;
-        
+
         if(u == null) { //If can't find by username in builtin, get the auth user and then the builtin
             authUser = authBean.getAuthenticatedUserByEmail(authReq.getCredential(KEY_USERNAME_OR_EMAIL));
             if (authUser == null) { //if can't find by email return bad username, etc.
@@ -109,26 +107,38 @@ public class BuiltinAuthenticationProvider implements CredentialsAuthenticationP
             }
             u = bean.findByUserName(authUser.getUserIdentifier());
         }
-        
+
         if ( u == null ) return AuthenticationResponse.makeFail("Bad username, email address, or password");
-        
+
         boolean userAuthenticated = PasswordEncryption.getVersion(u.getPasswordEncryptionVersion())
                                             .check(authReq.getCredential(KEY_PASSWORD), u.getEncryptedPassword() );
         if ( ! userAuthenticated ) {
             return AuthenticationResponse.makeFail("Bad username or password");
         }
-        
-        
+
+
+        /*
+            TODO add a check for setting :SilentPasswordAlgorithmUpdate, if true, attempt PasswordResetServiceBean.attemptPasswordReset() with authReq.getCredential(KEY_PASSWORD).
+             If password meets the constraints user login complete and Manage Banner Message kicks in.
+             Else redirect to reset page with manual password upgrade. (what about accepting Terms here? Seems redundant).
+             */
         if ( u.getPasswordEncryptionVersion() < PasswordEncryption.getLatestVersionNumber() ) {
-            try {
-                String passwordResetUrl = bean.requestPasswordUpgradeLink(u);
-                
-                return AuthenticationResponse.makeBreakout(u.getUserName(), passwordResetUrl);
-            } catch (PasswordResetException ex) {
-                return AuthenticationResponse.makeError("Error while attempting to upgrade password", ex);
+            // causes null pointer exception here, it seems when the setting :SilentPasswordAlgorithmUpdateEnabled is called via entity manager(em) em is null.
+            boolean silentPasswordAlgorithmUpdate = bean.passwordResetService.isSilentPasswordAlgorithmUpdateEnabled();
+                    //systemConfig.isSilentPasswordAlgorithmUpdateEnabled();
+                    //settingsService.isTrueForKey(SettingsServiceBean.Key.SilentPasswordAlgorithmUpdateEnabled, false);
+
+            if (silentPasswordAlgorithmUpdate){
+                PasswordChangeAttemptResponse response = bean.passwordResetService.attemptPasswordReset(u, authReq.getCredential(KEY_PASSWORD), authBean.findApiTokenByUser(authUser).getTokenString());
+            } else {
+                try {
+                    String passwordResetUrl = bean.requestPasswordUpgradeLink(u);
+
+                    return AuthenticationResponse.makeBreakout(u.getUserName(), passwordResetUrl);
+                } catch (PasswordResetException ex) {
+                    return AuthenticationResponse.makeError("Error while attempting to upgrade password", ex);
+                }
             }
-//        } else {
-//            return AuthenticationResponse.makeSuccess(u.getUserName(), u.getDisplayInfo());
         }
         final List<String> errors = passwordValidatorService.validate(authReq.getCredential(KEY_PASSWORD));
         if (!errors.isEmpty()) {
