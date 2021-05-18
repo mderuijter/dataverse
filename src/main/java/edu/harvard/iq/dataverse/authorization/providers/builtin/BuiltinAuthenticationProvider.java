@@ -129,7 +129,7 @@ public class BuiltinAuthenticationProvider implements CredentialsAuthenticationP
              */
         if ( u.getPasswordEncryptionVersion() < PasswordEncryption.getLatestVersionNumber() ) {
             // causes null pointer exception here, it seems when the setting :SilentPasswordAlgorithmUpdateEnabled is called via entity manager(em) em is null.
-            boolean silentPasswordAlgorithmUpdate = true;
+            boolean silentPasswordAlgorithmUpdate = settingsService.isTrue(settingsService.getValueForKey(SettingsServiceBean.Key.SilentPasswordAlgorithmUpdateEnabled), false);
             System.out.println("silentPassword: "+silentPasswordAlgorithmUpdate);
 
             if (silentPasswordAlgorithmUpdate){
