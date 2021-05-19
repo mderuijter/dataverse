@@ -267,10 +267,6 @@ public class PasswordResetServiceBean {
 
     }
 
-    public boolean isSilentPasswordAlgorithmUpdateEnabled(){
-        return systemConfig.isSilentPasswordAlgorithmUpdateEnabled();
-    }
-
     private boolean deleteToken(String token) {
         PasswordResetData doomed = findSinglePasswordResetDataByToken(token);
         try {

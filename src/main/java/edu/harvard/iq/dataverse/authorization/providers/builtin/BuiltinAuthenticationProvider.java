@@ -2,14 +2,11 @@ package edu.harvard.iq.dataverse.authorization.providers.builtin;
 
 import edu.harvard.iq.dataverse.authorization.*;
 import edu.harvard.iq.dataverse.authorization.users.AuthenticatedUser;
-import edu.harvard.iq.dataverse.passwordreset.PasswordChangeAttemptResponse;
-import edu.harvard.iq.dataverse.passwordreset.PasswordResetException;
-import edu.harvard.iq.dataverse.passwordreset.PasswordResetServiceBean;
+import edu.harvard.iq.dataverse.passwordreset.*;
 import edu.harvard.iq.dataverse.settings.SettingsServiceBean;
 import edu.harvard.iq.dataverse.util.BundleUtil;
 import edu.harvard.iq.dataverse.validation.PasswordValidatorServiceBean;
 
-import javax.ejb.EJB;
 import java.util.Arrays;
 import java.util.List;
 
@@ -34,9 +31,9 @@ public class BuiltinAuthenticationProvider implements CredentialsAuthenticationP
 
     final BuiltinUserServiceBean bean;
     final AuthenticationServiceBean authBean;
-    private PasswordValidatorServiceBean passwordValidatorService;
-    private PasswordResetServiceBean passwordResetService;
-    private SettingsServiceBean settingsService;
+    private final PasswordValidatorServiceBean passwordValidatorService;
+    private final PasswordResetServiceBean passwordResetService;
+    private final SettingsServiceBean settingsService;
 
     public BuiltinAuthenticationProvider( BuiltinUserServiceBean aBean, PasswordValidatorServiceBean passwordValidatorService, AuthenticationServiceBean auBean ,PasswordResetServiceBean passwordResetService, SettingsServiceBean settingsService ) {
         this.bean = aBean;
@@ -121,19 +118,22 @@ public class BuiltinAuthenticationProvider implements CredentialsAuthenticationP
             return AuthenticationResponse.makeFail("Bad username or password");
         }
 
-
-        /*
-            TODO add a check for setting :SilentPasswordAlgorithmUpdate, if true, attempt PasswordResetServiceBean.attemptPasswordReset() with authReq.getCredential(KEY_PASSWORD).
-             If password meets the constraints user login complete and Manage Banner Message kicks in.
-             Else redirect to reset page with manual password upgrade. (what about accepting Terms here? Seems redundant).
-             */
         if ( u.getPasswordEncryptionVersion() < PasswordEncryption.getLatestVersionNumber() ) {
-            // causes null pointer exception here, it seems when the setting :SilentPasswordAlgorithmUpdateEnabled is called via entity manager(em) em is null.
-            boolean silentPasswordAlgorithmUpdate = settingsService.isTrue(settingsService.getValueForKey(SettingsServiceBean.Key.SilentPasswordAlgorithmUpdateEnabled), false);
-            System.out.println("silentPassword: "+silentPasswordAlgorithmUpdate);
 
+            // if :SilentPasswordAlgorithmUpdateEnabled is true a silent  password upgrade is attempted.
+            boolean silentPasswordAlgorithmUpdate = settingsService.isTrueForKey(SettingsServiceBean.Key.SilentPasswordAlgorithmUpdateEnabled, false);
             if (silentPasswordAlgorithmUpdate){
-                PasswordChangeAttemptResponse response = passwordResetService.attemptPasswordReset(u, authReq.getCredential(KEY_PASSWORD), authBean.findApiTokenByUser(authUser).getTokenString());
+                String token;
+                try {
+                    PasswordResetInitResponse passwordResetInitResponse = passwordResetService.requestPasswordReset(u, false, PasswordResetData.Reason.UPGRADE_REQUIRED );
+                    token = passwordResetInitResponse.getPasswordResetData().getToken();
+                } catch (PasswordResetException ex) {
+                    return AuthenticationResponse.makeError("Error while attempting to upgrade password", ex);
+                }
+                PasswordChangeAttemptResponse passwordChangeAttemptResponse = passwordResetService.attemptPasswordReset(u, authReq.getCredential(KEY_PASSWORD), token);
+                if ( ! passwordChangeAttemptResponse.isChanged()){
+                    return AuthenticationResponse.makeFail("Error while attempting to upgrade password");
+                }
             } else {
                 try {
                     String passwordResetUrl = bean.requestPasswordUpgradeLink(u);
