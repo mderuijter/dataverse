@@ -100,6 +100,10 @@ public class PasswordResetPage implements java.io.Serializable {
             passwordResetData = passwordResetExecResponse.getPasswordResetData();
             if (passwordResetData != null) {
                 user = passwordResetData.getBuiltinUser();
+                if (passwordResetData.getReason().equals(PasswordResetData.Reason.UPGRADE_REQUIRED)){
+                    newPassword = (String) FacesContext.getCurrentInstance().getExternalContext().getFlash().get("silentUpgradePasswd");
+                    FacesContext.getCurrentInstance().getExternalContext().getFlash().remove("silentUpgradePasswd");
+                }
             } else {
                 FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, 
                         BundleUtil.getStringFromBundle("passwdVal.passwdReset.resetLinkTitle"),
@@ -230,6 +234,10 @@ public class PasswordResetPage implements java.io.Serializable {
         this.passwordResetData = passwordResetData;
     }
 
+    public boolean isSilentPasswordAlgorithmUpdateEnabled(){
+        return settingsWrapper.isTrueForKey(SettingsServiceBean.Key.SilentPasswordAlgorithmUpdateEnabled, false);
+    }
+
     public String getGoodPasswordDescription() {
         // FIXME: Pass the errors in.
         return passwordValidatorService.getGoodPasswordDescription(null);
@@ -240,8 +248,24 @@ public class PasswordResetPage implements java.io.Serializable {
         if(customPasswordResetAlertMessage != null && !customPasswordResetAlertMessage.isEmpty()){
             return customPasswordResetAlertMessage;
         } else {
-            String defaultPasswordResetAlertMessage = BundleUtil.getStringFromBundle("passwdReset.newPasswd.details");
-            return defaultPasswordResetAlertMessage;
+            return BundleUtil.getStringFromBundle("passwdReset.newPasswd.details");
+        }
+    }
+
+    public String getCustomPasswordResetAlertIntro() {
+        String customPasswordResetAlertIntro = settingsWrapper.getValueForKey(SettingsServiceBean.Key.CustomPasswordResetAlertIntro);
+        if(customPasswordResetAlertIntro != null && !customPasswordResetAlertIntro.isEmpty()){
+            return customPasswordResetAlertIntro;
+        } else {
+            return BundleUtil.getStringFromBundle("passwdReset.alert.intro");
+        }
+    }
+    public String getCustomPasswordResetButton() {
+        String customPasswordResetButton = settingsWrapper.getValueForKey(SettingsServiceBean.Key.CustomPasswordResetButton);
+        if(customPasswordResetButton != null && !customPasswordResetButton.isEmpty()){
+            return customPasswordResetButton;
+        } else {
+            return BundleUtil.getStringFromBundle("passwdReset.resetBtn");
         }
     }
 }
