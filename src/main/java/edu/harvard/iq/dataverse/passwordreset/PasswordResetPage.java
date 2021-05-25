@@ -91,6 +91,8 @@ public class PasswordResetPage implements java.io.Serializable {
     String newPassword;
     
     PasswordResetData passwordResetData;
+
+    boolean validationFailed;
     
     private List<String> passwordErrors;
 
@@ -102,7 +104,7 @@ public class PasswordResetPage implements java.io.Serializable {
                 user = passwordResetData.getBuiltinUser();
                 if (passwordResetData.getReason().equals(PasswordResetData.Reason.UPGRADE_REQUIRED)){
                     newPassword = (String) FacesContext.getCurrentInstance().getExternalContext().getFlash().get("silentUpgradePasswd");
-                    FacesContext.getCurrentInstance().getExternalContext().getFlash().remove("silentUpgradePasswd");
+                    validationFailed = false;
                 }
             } else {
                 FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, 
@@ -147,6 +149,7 @@ public class PasswordResetPage implements java.io.Serializable {
 
     public String resetPassword() {
         PasswordChangeAttemptResponse response = passwordResetService.attemptPasswordReset(user, newPassword, this.token);
+        validationFailed = response.getMessageDetail().contains("Password Reset Problem");
         if (response.isChanged()) {
             FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, response.getMessageSummary(), response.getMessageDetail()));
             String builtinAuthProviderId = BuiltinAuthenticationProvider.PROVIDER_ID;
@@ -200,6 +203,10 @@ public class PasswordResetPage implements java.io.Serializable {
 
     public void setToken(String token) {
         this.token = token;
+    }
+
+    public boolean isFailedValidation(){
+        return validationFailed;
     }
 
     public BuiltinUser getUser() {
