@@ -2,7 +2,7 @@ package edu.harvard.iq.dataverse;
 
 
 import javax.persistence.*;
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
 
@@ -12,13 +12,15 @@ import java.util.Objects;
  */
 @NamedQueries({
 		@NamedQuery( name="Embargo.findAll",
-				query="SELECT e FROM Embargo e"),
+				query = "SELECT e FROM Embargo e"),
 		@NamedQuery( name="Embargo.findById",
 				query = "SELECT e FROM Embargo e WHERE e.id=:id"),
 		@NamedQuery( name="Embargo.findByDateAvailable",
 				query = "SELECT e FROM Embargo e WHERE e.dateAvailable=:dateAvailable"),
 		@NamedQuery( name="Embargo.deleteById",
-				query="DELETE FROM Embargo e WHERE e.id=:id")
+				query = "DELETE FROM Embargo e WHERE e.id=:id"),
+		/*@NamedQuery( name="Embargo.findFileIdsByDoi",
+				query = "SELECT df.")*/
 })
 @Entity
 public class Embargo {
@@ -27,8 +29,8 @@ public class Embargo {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(name = "date_available", columnDefinition="TIMESTAMP", nullable = false)
-	private LocalDateTime dateAvailable;
+	@Column(nullable = false)
+	private Timestamp dateAvailable;
 
 	@Column(columnDefinition="TEXT")
 	private String reason;
@@ -36,7 +38,10 @@ public class Embargo {
 	@OneToMany(mappedBy="embargo", cascade={ CascadeType.REMOVE, CascadeType.PERSIST}, orphanRemoval=true)
 	private List<DataFile> dataFiles;
 
-	public Embargo(LocalDateTime dateAvailable, String reason) {
+	public Embargo(){
+	}
+
+	public Embargo(Timestamp dateAvailable, String reason) {
 		this.dateAvailable = dateAvailable;
 		this.reason = reason;
 	}
@@ -49,11 +54,11 @@ public class Embargo {
 		this.id = id;
 	}
 
-	public LocalDateTime getDateAvailable() {
+	public Timestamp getDateAvailable() {
 		return dateAvailable;
 	}
 
-	public void setDateAvailable(LocalDateTime dateAvailable) {
+	public void setDateAvailable(Timestamp dateAvailable) {
 		this.dateAvailable = dateAvailable;
 	}
 
