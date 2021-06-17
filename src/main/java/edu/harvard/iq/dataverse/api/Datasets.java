@@ -90,6 +90,7 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -105,13 +106,7 @@ import java.util.logging.Logger;
 import javax.ejb.EJB;
 import javax.ejb.EJBException;
 import javax.inject.Inject;
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonArrayBuilder;
-import javax.json.JsonException;
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
-import javax.json.JsonReader;
+import javax.json.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -1106,8 +1101,39 @@ public class Datasets extends AbstractApiBean {
 
     @POST
     @Path("{id}/files/actions/:set-embargo")
-    public Response createFileEmbargo(@PathParam("id") long id, Embargo embargo){
-        embargoService.save(embargo);
+    public Response createFileEmbargo(@PathParam("id") String id, String jsonBody){
+        String persistentId = getRequestParameter(id.substring(1));
+        StringReader rdr = new StringReader(jsonBody);
+        JsonObject json = Json.createReader(rdr).readObject();
+
+        Embargo embargo = new Embargo();
+        embargo.setDateAvailable(LocalDateTime.parse(json.getString("dateAvailable")));
+        embargo.setReason(json.getString("reason"));
+
+        Dataset dataset = datasetService.findByGlobalId(persistentId);
+        List<DataFile> datasetFiles = dataset.getFiles();
+
+        List<DataFile> filesToEmbargo = new LinkedList<>();
+        if (json.containsKey("fileIds")){
+            JsonArray fileIds = json.getJsonArray("fileIds");
+            for (JsonValue jsv : fileIds) {
+                //do something with the JsonValue's
+                try {
+                    DataFile dataFile = findDataFileOrDie(jsv.toString());
+                    filesToEmbargo.add(dataFile);
+                } catch (WrappedResponse wrappedResponse) {
+                    wrappedResponse.printStackTrace();
+                }
+                logger.info("JsonValue: "+jsv);
+            }
+        }
+
+        if (datasetFiles.containsAll(filesToEmbargo)){
+            Long embargoId = embargoService.save(embargo);
+            for (DataFile datafile : filesToEmbargo){
+                datafile.setEmbargo(embargoService.findByEmbargoId(embargoId));
+            }
+        }
         return ok(Json.createObjectBuilder().add("message", "Files were embargoed"));
     }
     

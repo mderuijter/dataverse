@@ -38,12 +38,14 @@ public class EmbargoServiceBean {
 		}
 	}
 
-	public void save(Embargo embargo){
+	public Long save(Embargo embargo){
 		if (embargo.getId() == null) {
 			em.persist(embargo);
+			em.flush();
 			actionLogSvc.log( new ActionLogRecord(ActionLogRecord.ActionType.Admin, "embargoCreate")
 					.setInfo("date available: "+embargo.getDateAvailable() + " reason: " + embargo.getReason()));
 		}
+		return embargo.getId();
 	}
 
 	public int deleteById(long id) {

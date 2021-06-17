@@ -3,6 +3,7 @@ package edu.harvard.iq.dataverse;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,7 +31,7 @@ public class Embargo {
 	private Long id;
 
 	@Column(nullable = false)
-	private Timestamp dateAvailable;
+	private LocalDateTime dateAvailable;
 
 	@Column(columnDefinition="TEXT")
 	private String reason;
@@ -41,7 +42,7 @@ public class Embargo {
 	public Embargo(){
 	}
 
-	public Embargo(Timestamp dateAvailable, String reason) {
+	public Embargo(LocalDateTime dateAvailable, String reason) {
 		this.dateAvailable = dateAvailable;
 		this.reason = reason;
 	}
@@ -54,11 +55,11 @@ public class Embargo {
 		this.id = id;
 	}
 
-	public Timestamp getDateAvailable() {
+	public LocalDateTime getDateAvailable() {
 		return dateAvailable;
 	}
 
-	public void setDateAvailable(Timestamp dateAvailable) {
+	public void setDateAvailable(LocalDateTime dateAvailable) {
 		this.dateAvailable = dateAvailable;
 	}
 

@@ -755,7 +755,7 @@ public class JsonPrinter {
     public static JsonObjectBuilder json(Embargo embargo){
         return jsonObjectBuilder()
                 .add("id", embargo.getId())
-                .add("dateAvailable", embargo.getDateAvailable())
+                .add("dateAvailable", embargo.getDateAvailable().toString())
                 .add("reason", embargo.getReason());
     }
         
