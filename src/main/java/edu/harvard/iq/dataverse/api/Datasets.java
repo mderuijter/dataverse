@@ -93,14 +93,7 @@ import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
@@ -1102,39 +1095,94 @@ public class Datasets extends AbstractApiBean {
     @POST
     @Path("{id}/files/actions/:set-embargo")
     public Response createFileEmbargo(@PathParam("id") String id, String jsonBody){
-        String persistentId = getRequestParameter(id.substring(1));
+
+        // user is authenticated
+        AuthenticatedUser authenticatedUser = null;
+        try {
+            authenticatedUser = findAuthenticatedUserOrDie();
+        } catch (WrappedResponse ex) {
+            return error(Status.UNAUTHORIZED, "Authentication is required.");
+        }
+
+        Dataset dataset;
+        try {
+            dataset = findDatasetOrDie(id);
+        } catch (WrappedResponse ex) {
+            return ex.getResponse();
+        }
+
+        // client is superadmin or (client has EditDataset permission on these files and files are unreleased)
+        if (!authenticatedUser.isSuperuser() || !permissionService.userOn(authenticatedUser, Objects.requireNonNull(dataset).getOwner()).has(Permission.EditDataset)) {
+            return error(Status.FORBIDDEN, "Not a superuser or user has no permission to edit this dataset.");
+        }
+
+        // check if embargoes are allowed(:MaxEmbargoDurationInMonths), gets the :MaxEmbargoDurationInMonths setting variable, if 0 or not set(null) return 400
+        long maxEmbargoDurationInMonths = 0;
+        try {
+            maxEmbargoDurationInMonths  = Long.parseLong(settingsService.get(SettingsServiceBean.Key.MaxEmbargoDurationInMonths.toString()));
+        } catch (NumberFormatException nfe){
+            if (nfe.getMessage().contains("null")) {
+                return error(BAD_REQUEST, "No Embargoes allowed");
+            }
+        }
+        if (maxEmbargoDurationInMonths == 0){
+            return error(BAD_REQUEST, "No Embargoes allowed");
+        }
+
         StringReader rdr = new StringReader(jsonBody);
         JsonObject json = Json.createReader(rdr).readObject();
 
         Embargo embargo = new Embargo();
-        embargo.setDateAvailable(LocalDateTime.parse(json.getString("dateAvailable")));
         embargo.setReason(json.getString("reason"));
 
-        Dataset dataset = datasetService.findByGlobalId(persistentId);
-        List<DataFile> datasetFiles = dataset.getFiles();
+        LocalDateTime currentDateTime = LocalDateTime.now();
+        LocalDateTime dateAvailable = LocalDateTime.parse(json.getString("dateAvailable"));
 
-        List<DataFile> filesToEmbargo = new LinkedList<>();
-        if (json.containsKey("fileIds")){
-            JsonArray fileIds = json.getJsonArray("fileIds");
-            for (JsonValue jsv : fileIds) {
-                //do something with the JsonValue's
-                try {
-                    DataFile dataFile = findDataFileOrDie(jsv.toString());
-                    filesToEmbargo.add(dataFile);
-                } catch (WrappedResponse wrappedResponse) {
-                    wrappedResponse.printStackTrace();
-                }
-                logger.info("JsonValue: "+jsv);
+        // check :MaxEmbargoDurationInMonths if -1
+        LocalDateTime maxEmbargoDateTime = maxEmbargoDurationInMonths != -1 ? LocalDateTime.now().plusMonths(maxEmbargoDurationInMonths) : null;
+        // dateAvailable is not in the past
+        if (dateAvailable.isAfter(currentDateTime)){
+            embargo.setDateAvailable(dateAvailable);
+        } else {
+            return error(BAD_REQUEST, "Date Available can not be in the past");
+        }
+
+        // dateAvailable is within limits
+        if (maxEmbargoDateTime != null){
+            if (dateAvailable.compareTo(maxEmbargoDateTime) > 0){
+                return error(BAD_REQUEST, "Date Available can not exceed MaxEmbargoDurationInMonths: "+maxEmbargoDurationInMonths);
             }
         }
 
+        //TODO superadmin can overrrule an existing embargo, even on released files
+        //TODO check if files are unreleased(DRAFT?).
+        List<DataFile> datasetFiles = dataset.getFiles();
+        List<DataFile> filesToEmbargo = new LinkedList<>();
+
+        // extract fileIds from json, find datafiles and add to list
+        if (json.containsKey("fileIds")){
+            JsonArray fileIds = json.getJsonArray("fileIds");
+            for (JsonValue jsv : fileIds) {
+                try {
+                    DataFile dataFile = findDataFileOrDie(jsv.toString());
+                    filesToEmbargo.add(dataFile);
+                } catch (WrappedResponse ex) {
+                    return ex.getResponse();
+                }
+            }
+        }
+
+        // check if files belong to dataset
         if (datasetFiles.containsAll(filesToEmbargo)){
             Long embargoId = embargoService.save(embargo);
             for (DataFile datafile : filesToEmbargo){
                 datafile.setEmbargo(embargoService.findByEmbargoId(embargoId));
+                //TODO update Datafiles with embargo id's
             }
+            return ok(Json.createObjectBuilder().add("message", "Files were embargoed"));
+        } else {
+            return error(BAD_REQUEST, "Not all files belong to dataset");
         }
-        return ok(Json.createObjectBuilder().add("message", "Files were embargoed"));
     }
     
     @PUT
