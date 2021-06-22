@@ -1112,8 +1112,9 @@ public class Datasets extends AbstractApiBean {
         }
 
         // client is superadmin or (client has EditDataset permission on these files and files are unreleased)
-        if (!authenticatedUser.isSuperuser() || !permissionService.userOn(authenticatedUser, Objects.requireNonNull(dataset).getOwner()).has(Permission.EditDataset)) {
-            return error(Status.FORBIDDEN, "Not a superuser or user has no permission to edit this dataset.");
+        // check if files are unreleased(DRAFT?)
+        if ((!authenticatedUser.isSuperuser() && (dataset.getLatestVersion().getVersionState() != DatasetVersion.VersionState.DRAFT) ) || !permissionService.userOn(authenticatedUser, Objects.requireNonNull(dataset).getOwner()).has(Permission.EditDataset)) {
+            return error(Status.FORBIDDEN, "Either the files are released and user is not a superuser or user does not have EditDataset permissions");
         }
 
         // check if embargoes are allowed(:MaxEmbargoDurationInMonths), gets the :MaxEmbargoDurationInMonths setting variable, if 0 or not set(null) return 400
@@ -1122,11 +1123,11 @@ public class Datasets extends AbstractApiBean {
             maxEmbargoDurationInMonths  = Long.parseLong(settingsService.get(SettingsServiceBean.Key.MaxEmbargoDurationInMonths.toString()));
         } catch (NumberFormatException nfe){
             if (nfe.getMessage().contains("null")) {
-                return error(BAD_REQUEST, "No Embargoes allowed");
+                return error(Status.BAD_REQUEST, "No Embargoes allowed");
             }
         }
         if (maxEmbargoDurationInMonths == 0){
-            return error(BAD_REQUEST, "No Embargoes allowed");
+            return error(Status.BAD_REQUEST, "No Embargoes allowed");
         }
 
         StringReader rdr = new StringReader(jsonBody);
@@ -1144,18 +1145,16 @@ public class Datasets extends AbstractApiBean {
         if (dateAvailable.isAfter(currentDateTime)){
             embargo.setDateAvailable(dateAvailable);
         } else {
-            return error(BAD_REQUEST, "Date Available can not be in the past");
+            return error(Status.BAD_REQUEST, "Date available can not be in the past");
         }
 
         // dateAvailable is within limits
         if (maxEmbargoDateTime != null){
             if (dateAvailable.compareTo(maxEmbargoDateTime) > 0){
-                return error(BAD_REQUEST, "Date Available can not exceed MaxEmbargoDurationInMonths: "+maxEmbargoDurationInMonths);
+                return error(Status.BAD_REQUEST, "Date available can not exceed MaxEmbargoDurationInMonths: "+maxEmbargoDurationInMonths);
             }
         }
 
-        //TODO superadmin can overrrule an existing embargo, even on released files
-        //TODO check if files are unreleased(DRAFT?).
         List<DataFile> datasetFiles = dataset.getFiles();
         List<DataFile> filesToEmbargo = new LinkedList<>();
 
@@ -1172,14 +1171,31 @@ public class Datasets extends AbstractApiBean {
             }
         }
 
-        // check if files belong to dataset
+        //check if files belong to dataset
         if (datasetFiles.containsAll(filesToEmbargo)){
             Long embargoId = embargoService.save(embargo);
+            JsonArrayBuilder restrictedFiles = Json.createArrayBuilder();
             for (DataFile datafile : filesToEmbargo){
-                datafile.setEmbargo(embargoService.findByEmbargoId(embargoId));
-                //TODO update Datafiles with embargo id's
+                // superuser can overrule an existing embargo, even on released files
+                if (datafile.getEmbargo() != null && !authenticatedUser.isSuperuser()){
+                    restrictedFiles.add(datafile.getId());
+                } else {
+                    datafile.setEmbargo(embargoService.findByEmbargoId(embargoId));
+                    fileService.save(datafile);
+                }
             }
-            return ok(Json.createObjectBuilder().add("message", "Files were embargoed"));
+            JsonArray restrictedFilesArray = restrictedFiles.build();
+            if (restrictedFilesArray.isEmpty()) {
+                return ok(Json.createObjectBuilder().add("message", "Files were embargoed"));
+            } else {
+                embargoService.deleteById(embargoId);
+                return Response.status(Status.FORBIDDEN)
+                        .entity( NullSafeJsonBuilder.jsonObjectBuilder()
+                                .add("status", STATUS_ERROR)
+                                .add("message", "You do not have permission to embargo the following files" )
+                                .add("files",restrictedFilesArray).build()
+                        ).type(MediaType.APPLICATION_JSON_TYPE).build();
+            }
         } else {
             return error(BAD_REQUEST, "Not all files belong to dataset");
         }
