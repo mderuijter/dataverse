@@ -578,6 +578,8 @@ public class JsonPrinter {
         if (new GlobalId(df).toURL() != null){
             pidURL = new GlobalId(df).toURL().toString();
         }
+
+        JsonObjectBuilder embargo = df.getEmbargo() != null ? JsonPrinter.json(df.getEmbargo()) : null;
         
         return jsonObjectBuilder()
                 .add("id", df.getId())
@@ -586,7 +588,8 @@ public class JsonPrinter {
                 .add("filename", fileName)
                 .add("contentType", df.getContentType())            
                 .add("filesize", df.getFilesize())            
-                .add("description", df.getDescription())    
+                .add("description", df.getDescription())
+                .add("embargo", embargo)
                 //.add("released", df.isReleased())
                 //.add("restricted", df.isRestricted())
                 .add("storageIdentifier", df.getStorageIdentifier())
@@ -754,7 +757,6 @@ public class JsonPrinter {
 
     public static JsonObjectBuilder json(Embargo embargo){
         return jsonObjectBuilder()
-                .add("id", embargo.getId())
                 .add("dateAvailable", embargo.getDateAvailable().toString())
                 .add("reason", embargo.getReason());
     }
