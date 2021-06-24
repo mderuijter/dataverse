@@ -2,7 +2,6 @@ package edu.harvard.iq.dataverse;
 
 
 import javax.persistence.*;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -19,9 +18,7 @@ import java.util.Objects;
 		@NamedQuery( name="Embargo.findByDateAvailable",
 				query = "SELECT e FROM Embargo e WHERE e.dateAvailable=:dateAvailable"),
 		@NamedQuery( name="Embargo.deleteById",
-				query = "DELETE FROM Embargo e WHERE e.id=:id"),
-		/*@NamedQuery( name="Embargo.findFileIdsByDoi",
-				query = "SELECT df.")*/
+				query = "DELETE FROM Embargo e WHERE e.id=:id")
 })
 @Entity
 public class Embargo {
