@@ -1150,7 +1150,7 @@ public class Datasets extends AbstractApiBean {
 
         // dateAvailable is within limits
         if (maxEmbargoDateTime != null){
-            if (dateAvailable.compareTo(maxEmbargoDateTime) > 0){
+            if (dateAvailable.isAfter(maxEmbargoDateTime)){
                 return error(Status.BAD_REQUEST, "Date available can not exceed MaxEmbargoDurationInMonths: "+maxEmbargoDurationInMonths);
             }
         }
