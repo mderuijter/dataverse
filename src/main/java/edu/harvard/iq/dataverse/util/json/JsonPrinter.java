@@ -352,8 +352,9 @@ public class JsonPrinter {
                 .add("lastUpdateTime", format(dsv.getLastUpdateTime()))
                 .add("releaseTime", format(dsv.getReleaseTime()))
                 .add("createTime", format(dsv.getCreateTime()))
-                .add("license", dsv.getTermsOfUseAndAccess().getLicense() != null ? dsv.getTermsOfUseAndAccess().getLicense().toString() : null)
-                .add("termsOfUse", getLicenseInfo(dsv))
+                .add("license", jsonObjectBuilder()
+                        .add("label", dsv.getTermsOfUseAndAccess().getLicense() != null ? dsv.getTermsOfUseAndAccess().getLicense().getName() : "CUSTOM")
+                        .add("uri", dsv.getTermsOfUseAndAccess().getLicense() != null ? dsv.getTermsOfUseAndAccess().getLicense().getUri().toString() : "https://mydataverse.com/licenses/10.507/DAR/VKCWQ8/v2.1")) //TODO create proper URI for Custom terms
                 .add("confidentialityDeclaration", dsv.getTermsOfUseAndAccess().getConfidentialityDeclaration() != null ? dsv.getTermsOfUseAndAccess().getConfidentialityDeclaration() : null)
                 .add("availabilityStatus", dsv.getTermsOfUseAndAccess().getAvailabilityStatus() != null ? dsv.getTermsOfUseAndAccess().getAvailabilityStatus() : null)
                 .add("specialPermissions", dsv.getTermsOfUseAndAccess().getSpecialPermissions() != null ? dsv.getTermsOfUseAndAccess().getSpecialPermissions() : null)
