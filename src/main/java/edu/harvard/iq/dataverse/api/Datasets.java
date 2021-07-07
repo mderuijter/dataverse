@@ -1146,24 +1146,17 @@ public class Datasets extends AbstractApiBean {
 
     @GET
     @Path("{id}/versions/{versionId}/customlicense")
-    @Produces(MediaType.APPLICATION_XHTML_XML)
-    public Response getCustomTermsTab(@PathParam("id") String id, @PathParam("versionId") String versionId){
-        String persistentId = null;
-        if (id != null) {
-            if (id.equals(":persistentId")) {
-                persistentId = getRequestParameter(":persistentId".substring(1));
-                if (persistentId == null) {
-                    return error(Response.Status.BAD_REQUEST, "");
-                }
-            }
-        } else return error(Response.Status.BAD_REQUEST, "");
-
-        if (versionId == null) {
-            return error(Response.Status.BAD_REQUEST, "");
-        } else if (versionId.equals(":draft")){
-            versionId = "DRAFT";
+    public Response getCustomTermsTab(@PathParam("id") String id, @PathParam("versionId") String versionId, @Context UriInfo uriInfo, @Context HttpHeaders headers){
+        User user = session.getUser();
+        String persistentId;
+        try {
+            if (!user.isAuthenticated()) user = findAuthenticatedUserOrDie();
+            getDatasetVersionOrDie(createDataverseRequest(user), versionId, findDatasetOrDie(id), uriInfo, headers);
+            persistentId = getRequestParameter(":persistentId".substring(1));
+            if (versionId.equals(":draft")) versionId = "DRAFT";
+        } catch (WrappedResponse wrappedResponse) {
+           return wrappedResponse.getResponse();
         }
-
         return Response.temporaryRedirect(URI.create(systemConfig.getDataverseSiteUrl() + "/dataset.xhtml?persistentId=" + persistentId + "&version=" + versionId + "&selectTab=termsTab")).build();
     }
 

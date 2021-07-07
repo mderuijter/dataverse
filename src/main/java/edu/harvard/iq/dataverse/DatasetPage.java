@@ -1861,15 +1861,20 @@ public class DatasetPage implements java.io.Serializable {
                 return permissionsWrapper.notFound();
             }
 
-            //if (session.getUser(true).isAuthenticated()) {
-                //setCurrentUser((AuthenticatedUser) session.getUser());
-                //userAuthProvider = authenticationService.lookupProvider(currentUser);
-
-                if (selectTab.equals("termsTab")){
-                    activeTabIndex = 2;
-                }
-            //}
-
+            switch (selectTab){
+                case "dataFilesTab":
+                    selectedTabIndex = 0;
+                    break;
+                case "metadataMapTab":
+                    selectedTabIndex = 1;
+                    break;
+                case "termsTab":
+                    selectedTabIndex = 2;
+                    break;
+                case "versionsTab":
+                    selectedTabIndex = 3;
+                    break;
+            }
 
             //this.dataset = this.workingVersion.getDataset();
 
@@ -2798,10 +2803,6 @@ public class DatasetPage implements java.io.Serializable {
         }
 
         displayWorkflowComments();
-
-        if (selectTab.equals("termsTab")){
-            activeTabIndex = 2;
-        }
 
         return "";
     }
