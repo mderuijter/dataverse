@@ -1150,8 +1150,9 @@ public class Datasets extends AbstractApiBean {
         User user = session.getUser();
         String persistentId;
         try {
-            if (!user.isAuthenticated()) user = findAuthenticatedUserOrDie();
-            getDatasetVersionOrDie(createDataverseRequest(user), versionId, findDatasetOrDie(id), uriInfo, headers);
+            if (getDatasetVersionOrDie(createDataverseRequest(user), versionId, findDatasetOrDie(id), uriInfo, headers).getTermsOfUseAndAccess().getLicense() != null){
+                return error(Status.NOT_FOUND, "This Dataset has no custom license");
+            }
             persistentId = getRequestParameter(":persistentId".substring(1));
             if (versionId.equals(":draft")) versionId = "DRAFT";
         } catch (WrappedResponse wrappedResponse) {
